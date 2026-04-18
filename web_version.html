@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>像素宠物 - 虚拟宠物养成游戏</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Courier New', monospace;
+            background: #2d1b69;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px;
+        }
+        
+        .game-container {
+            width: 100%;
+            max-width: 400px;
+            background: linear-gradient(180deg, #5b3a8c 0%, #2d1b69 100%);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            color: #e0f8cf;
+        }
+        
+        .pet-name {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        
+        .time-display {
+            font-size: 20px;
+            color: #99e550;
+        }
+        
+        .day-counter {
+            font-size: 14px;
+            color: #985ec9;
+        }
+        
+        .pet-area {
+            width: 100%;
+            height: 200px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 15px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .pet {
+            font-size: 80px;
+            animation: bounce 1s ease-in-out infinite;
+        }
+        
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        .pet.sleeping {
+            animation: none;
+            opacity: 0.8;
+        }
+        
+        .pet.sick {
+            filter: grayscale(50%);
+            animation: shake 0.5s ease-in-out infinite;
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        
+        .zzz {
+            position: absolute;
+            top: 30%;
+            right: 30%;
+            font-size: 24px;
+            color: #fff;
+            animation: float 2s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(-10deg); opacity: 0; }
+            50% { transform: translateY(-20px) rotate(10deg); opacity: 1; }
+        }
+        
+        .status-panel {
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .status-bar {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .status-icon {
+            width: 30px;
+            font-size: 18px;
+        }
+        
+        .status-label {
+            width: 60px;
+            font-size: 14px;
+            color: #e0f8cf;
+        }
+        
+        .bar-container {
+            flex: 1;
+            height: 12px;
+            background: #1a1a2e;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        
+        .bar-fill {
+            height: 100%;
+            border-radius: 6px;
+            transition: width 0.3s ease;
+        }
+        
+        .bar-hunger { background: linear-gradient(90deg, #ff9800, #ff5722); }
+        .bar-happiness { background: linear-gradient(90deg, #ffeb3b, #ffc107); }
+        .bar-health { background: linear-gradient(90deg, #f44336, #e91e63); }
+        .bar-clean { background: linear-gradient(90deg, #2196f3, #03a9f4); }
+        .bar-energy { background: linear-gradient(90deg, #4caf50, #8bc34a); }
+        
+        .status-value {
+            width: 40px;
+            text-align: right;
+            font-size: 12px;
+            color: #99e550;
+        }
+        
+        .action-buttons {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+        }
+        
+        .action-btn {
+            background: linear-gradient(180deg, #6abe30 0%, #4b8b24 100%);
+            border: none;
+            border-radius: 10px;
+            padding: 15px 5px;
+            font-size: 14px;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+        
+        .action-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        
+        .action-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .action-btn:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+        
+        .btn-icon {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+        
+        .food-menu {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .food-menu.active {
+            display: flex;
+        }
+        
+        .food-grid {
+            background: #2d1b69;
+            border-radius: 20px;
+            padding: 20px;
+            width: 90%;
+            max-width: 350px;
+        }
+        
+        .food-title {
+            color: #e0f8cf;
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 20px;
+        }
+        
+        .food-items {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .food-item {
+            background: rgba(106, 190, 48, 0.3);
+            border: 2px solid #6abe30;
+            border-radius: 10px;
+            padding: 10px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .food-item:hover {
+            background: rgba(106, 190, 48, 0.5);
+        }
+        
+        .food-name {
+            font-size: 16px;
+            color: #e0f8cf;
+        }
+        
+        .food-desc {
+            font-size: 12px;
+            color: #985ec9;
+            margin-top: 5px;
+        }
+        
+        .close-btn {
+            width: 100%;
+            padding: 12px;
+            background: #e91e63;
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: #6abe30;
+            color: white;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 16px;
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 200;
+        }
+        
+        .notification.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+        
+        .sleep-btn {
+            background: linear-gradient(180deg, #3f51b5 0%, #303f9f 100%);
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 24px;
+            cursor: pointer;
+            position: absolute;
+            top: 10px;
+            right: 10px;
+        }
+        
+        .morning-message {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(180deg, #5b3a8c 0%, #2d1b69 100%);
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            z-index: 300;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        
+        .morning-message.show {
+            display: block;
+        }
+        
+        .morning-message h2 {
+            color: #e0f8cf;
+            margin-bottom: 15px;
+        }
+        
+        .morning-message p {
+            color: #99e550;
+            margin-bottom: 10px;
+        }
+        
+        .morning-message button {
+            background: #6abe30;
+            border: none;
+            padding: 10px 30px;
+            border-radius: 10px;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="header">
+            <div>
+                <div class="pet-name" id="petName">小萌</div>
+                <div class="day-counter" id="dayCounter">第1天</div>
+            </div>
+            <div class="time-display" id="timeDisplay">00:00</div>
+        </div>
+        
+        <div class="pet-area" id="petArea">
+            <div class="pet" id="pet">🐸</div>
+            <div class="zzz" id="zzz" style="display: none;">💤</div>
+            <button class="sleep-btn" id="sleepBtn" onclick="toggleSleepMode()">🌙</button>
+        </div>
+        
+        <div class="status-panel">
+            <div class="status-bar">
+                <div class="status-icon">🍖</div>
+                <div class="status-label">饱腹度</div>
+                <div class="bar-container">
+                    <div class="bar-fill bar-hunger" id="hungerBar" style="width: 80%"></div>
+                </div>
+                <div class="status-value" id="hungerValue">80</div>
+            </div>
+            
+            <div class="status-bar">
+                <div class="status-icon">⭐</div>
+                <div class="status-label">幸福度</div>
+                <div class="bar-container">
+                    <div class="bar-fill bar-happiness" id="happinessBar" style="width: 80%"></div>
+                </div>
+                <div class="status-value" id="happinessValue">80</div>
+            </div>
+            
+            <div class="status-bar">
+                <div class="status-icon">❤️</div>
+                <div class="status-label">健康度</div>
+                <div class="bar-container">
+                    <div class="bar-fill bar-health" id="healthBar" style="width: 100%"></div>
+                </div>
+                <div class="status-value" id="healthValue">100</div>
+            </div>
+            
+            <div class="status-bar">
+                <div class="status-icon">✨</div>
+                <div class="status-label">清洁度</div>
+                <div class="bar-container">
+                    <div class="bar-fill bar-clean" id="cleanBar" style="width: 80%"></div>
+                </div>
+                <div class="status-value" id="cleanValue">80</div>
+            </div>
+            
+            <div class="status-bar">
+                <div class="status-icon">⚡</div>
+                <div class="status-label">能量值</div>
+                <div class="bar-container">
+                    <div class="bar-fill bar-energy" id="energyBar" style="width: 100%"></div>
+                </div>
+                <div class="status-value" id="energyValue">100</div>
+            </div>
+        </div>
+        
+        <div class="action-buttons">
+            <button class="action-btn" onclick="showFoodMenu()">
+                <span class="btn-icon">🍎</span>
+                <span>喂食</span>
+            </button>
+            <button class="action-btn" onclick="playWithPet()">
+                <span class="btn-icon">🎮</span>
+                <span>玩耍</span>
+            </button>
+            <button class="action-btn" onclick="cleanPet()">
+                <span class="btn-icon">🛁</span>
+                <span>清洁</span>
+            </button>
+            <button class="action-btn" onclick="petSleep()">
+                <span class="btn-icon">💤</span>
+                <span>休息</span>
+            </button>
+            <button class="action-btn" onclick="healPet()">
+                <span class="btn-icon">💊</span>
+                <span>治疗</span>
+            </button>
+        </div>
+    </div>
+    
+    <!-- 食物菜单 -->
+    <div class="food-menu" id="foodMenu">
+        <div class="food-grid">
+            <div class="food-title">选择食物</div>
+            <div class="food-items">
+                <div class="food-item" onclick="feedPet('apple')">
+                    <div class="food-name">🍎 苹果</div>
+                    <div class="food-desc">饱腹+20 健康+5</div>
+                </div>
+                <div class="food-item" onclick="feedPet('candy')">
+                    <div class="food-name">🍬 糖果</div>
+                    <div class="food-desc">饱腹+10 幸福+10</div>
+                </div>
+                <div class="food-item" onclick="feedPet('vegetable')">
+                    <div class="food-name">🥦 蔬菜</div>
+                    <div class="food-desc">饱腹+15 健康+10</div>
+                </div>
+                <div class="food-item" onclick="feedPet('cake')">
+                    <div class="food-name">🍰 蛋糕</div>
+                    <div class="food-desc">饱腹+30 幸福+20</div>
+                </div>
+                <div class="food-item" onclick="feedPet('potion')">
+                    <div class="food-name">💊 药水</div>
+                    <div class="food-desc">健康+30</div>
+                </div>
+                <div class="food-item" onclick="feedPet('energy_bar')">
+                    <div class="food-name">🍫 能量棒</div>
+                    <div class="food-desc">饱腹+25 能量+20</div>
+                </div>
+            </div>
+            <button class="close-btn" onclick="closeFoodMenu()">关闭</button>
+        </div>
+    </div>
+    
+    <!-- 通知 -->
+    <div class="notification" id="notification"></div>
+    
+    <!-- 早安消息 -->
+    <div class="morning-message" id="morningMessage">
+        <h2>☀️ 早上好！</h2>
+        <p>你睡了 <span id="sleepHours">0</span> 小时</p>
+        <p>宠物也休息得很好！</p>
+        <button onclick="closeMorningMessage()">开始新的一天</button>
+    </div>
+    
+    <script>
+        // 游戏状态
+        let pet = {
+            name: '小萌',
+            hunger: 80,
+            happiness: 80,
+            health: 100,
+            cleanliness: 80,
+            energy: 100,
+            isSleeping: false,
+            isSick: false,
+            ageDays: 1,
+            birthTime: new Date()
+        };
+        
+        let isPlayerSleeping = false;
+        let sleepStartTime = null;
+        
+        // 食物效果
+        const foods = {
+            apple: { hunger: 20, health: 5 },
+            candy: { hunger: 10, health: -5, happiness: 10 },
+            vegetable: { hunger: 15, health: 10 },
+            cake: { hunger: 30, health: -10, happiness: 20 },
+            potion: { health: 30 },
+            energy_bar: { hunger: 25, energy: 20 }
+        };
+        
+        // 更新显示
+        function updateDisplay() {
+            document.getElementById('petName').textContent = pet.name;
+            document.getElementById('dayCounter').textContent = `第${pet.ageDays}天`;
+            
+            document.getElementById('hungerBar').style.width = `${pet.hunger}%`;
+            document.getElementById('hungerValue').textContent = Math.round(pet.hunger);
+            
+            document.getElementById('happinessBar').style.width = `${pet.happiness}%`;
+            document.getElementById('happinessValue').textContent = Math.round(pet.happiness);
+            
+            document.getElementById('healthBar').style.width = `${pet.health}%`;
+            document.getElementById('healthValue').textContent = Math.round(pet.health);
+            
+            document.getElementById('cleanBar').style.width = `${pet.cleanliness}%`;
+            document.getElementById('cleanValue').textContent = Math.round(pet.cleanliness);
+            
+            document.getElementById('energyBar').style.width = `${pet.energy}%`;
+            document.getElementById('energyValue').textContent = Math.round(pet.energy);
+            
+            // 更新宠物显示
+            const petElement = document.getElementById('pet');
+            const zzzElement = document.getElementById('zzz');
+            
+            petElement.className = 'pet';
+            zzzElement.style.display = 'none';
+            
+            if (pet.isSick) {
+                petElement.classList.add('sick');
+                petElement.textContent = '🐸';
+            } else if (pet.isSleeping) {
+                petElement.classList.add('sleeping');
+                petElement.textContent = '🐸';
+                zzzElement.style.display = 'block';
+            } else {
+                petElement.textContent = '🐸';
+            }
+        }
+        
+        // 更新时间
+        function updateTime() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            document.getElementById('timeDisplay').textContent = `${hours}:${minutes}`;
+            
+            // 更新背景颜色
+            const hour = now.getHours();
+            let bgColor;
+            if (hour >= 6 && hour < 12) {
+                bgColor = 'linear-gradient(180deg, #87CEEB 0%, #5b3a8c 100%)';
+            } else if (hour >= 12 && hour < 18) {
+                bgColor = 'linear-gradient(180deg, #FFE4B5 0%, #5b3a8c 100%)';
+            } else if (hour >= 18 && hour < 21) {
+                bgColor = 'linear-gradient(180deg, #FF8C00 0%, #5b3a8c 100%)';
+            } else {
+                bgColor = 'linear-gradient(180deg, #191970 0%, #2d1b69 100%)';
+            }
+            document.body.style.background = bgColor;
+        }
+        
+        // 游戏循环
+        function gameLoop() {
+            if (!isPlayerSleeping) {
+                const decayRate = pet.isSleeping ? 0.3 : 1;
+                
+                // 饱腹度衰减（每10秒-1）
+                pet.hunger = Math.max(0, pet.hunger - 0.1 * decayRate);
+                
+                // 幸福度衰减（每15秒-1）
+                pet.happiness = Math.max(0, pet.happiness - 0.067 * decayRate);
+                
+                // 清洁度衰减（每20秒-1）
+                pet.cleanliness = Math.max(0, pet.cleanliness - 0.05 * decayRate);
+                
+                // 能量变化
+                if (pet.isSleeping) {
+                    pet.energy = Math.min(100, pet.energy + 0.2);
+                } else {
+                    pet.energy = Math.max(0, pet.energy - 0.05 * decayRate);
+                }
+                
+                // 健康度衰减
+                if (pet.hunger < 20 || pet.cleanliness < 20) {
+                    pet.health = Math.max(0, pet.health - 0.03 * decayRate);
+                }
+                
+                // 检查生病
+                if (pet.health < 20 && !pet.isSick) {
+                    if (Math.random() < 0.001) {
+                        pet.isSick = true;
+                        showNotification('宠物生病了！', 'error');
+                    }
+                }
+            }
+            
+            updateDisplay();
+            saveGame();
+        }
+        
+        // 喂食
+        function showFoodMenu() {
+            document.getElementById('foodMenu').classList.add('active');
+        }
+        
+        function closeFoodMenu() {
+            document.getElementById('foodMenu').classList.remove('active');
+        }
+        
+        function feedPet(foodType) {
+            const food = foods[foodType];
+            if (food) {
+                if (food.hunger) pet.hunger = Math.min(100, pet.hunger + food.hunger);
+                if (food.health) pet.health = Math.min(100, Math.max(0, pet.health + food.health));
+                if (food.happiness) pet.happiness = Math.min(100, pet.happiness + food.happiness);
+                if (food.energy) pet.energy = Math.min(100, pet.energy + food.energy);
+                
+                showNotification('宠物吃得很开心！', 'success');
+                updateDisplay();
+            }
+            closeFoodMenu();
+        }
+        
+        // 玩耍
+        function playWithPet() {
+            if (pet.energy < 20) {
+                showNotification('宠物太累了，需要休息！', 'warning');
+                return;
+            }
+            
+            pet.happiness = Math.min(100, pet.happiness + 15);
+            pet.energy = Math.max(0, pet.energy - 20);
+            pet.hunger = Math.max(0, pet.hunger - 5);
+            
+            showNotification('和宠物玩耍中...', 'info');
+            updateDisplay();
+        }
+        
+        // 清洁
+        function cleanPet() {
+            pet.cleanliness = Math.min(100, pet.cleanliness + 30);
+            pet.happiness = Math.min(100, pet.happiness + 5);
+            
+            showNotification('宠物变得干净了！', 'success');
+            updateDisplay();
+        }
+        
+        // 休息
+        function petSleep() {
+            pet.isSleeping = !pet.isSleeping;
+            
+            if (pet.isSleeping) {
+                showNotification('宠物睡着了...', 'info');
+            } else {
+                showNotification('宠物醒来了！', 'info');
+            }
+            updateDisplay();
+        }
+        
+        // 治疗
+        function healPet() {
+            if (!pet.isSick) {
+                showNotification('宠物很健康！', 'info');
+                return;
+            }
+            
+            pet.isSick = false;
+            pet.health = Math.min(100, pet.health + 30);
+            
+            showNotification('宠物被治愈了！', 'success');
+            updateDisplay();
+        }
+        
+        // 玩家睡眠模式
+        function toggleSleepMode() {
+            if (isPlayerSleeping) {
+                wakeUp();
+            } else {
+                if (confirm('准备睡觉了吗？宠物也会休息哦~')) {
+                    goToSleep();
+                }
+            }
+        }
+        
+        function goToSleep() {
+            isPlayerSleeping = true;
+            sleepStartTime = new Date();
+            pet.isSleeping = true;
+            document.getElementById('sleepBtn').textContent = '☀️';
+            showNotification('晚安~ Zzz...', 'info');
+            updateDisplay();
+        }
+        
+        function wakeUp() {
+            isPlayerSleeping = false;
+            
+            if (sleepStartTime) {
+                const now = new Date();
+                const sleepHours = Math.round((now - sleepStartTime) / 3600000);
+                
+                // 恢复能量
+                pet.energy = Math.min(100, pet.energy + sleepHours * 10);
+                pet.isSleeping = false;
+                
+                document.getElementById('sleepHours').textContent = sleepHours;
+                document.getElementById('morningMessage').classList.add('show');
+            }
+            
+            document.getElementById('sleepBtn').textContent = '🌙';
+            updateDisplay();
+        }
+        
+        function closeMorningMessage() {
+            document.getElementById('morningMessage').classList.remove('show');
+        }
+        
+        // 通知
+        function showNotification(message, type = 'info') {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = 'notification show';
+            
+            if (type === 'error') {
+                notification.style.background = '#f44336';
+            } else if (type === 'warning') {
+                notification.style.background = '#ff9800';
+            } else if (type === 'success') {
+                notification.style.background = '#4caf50';
+            } else {
+                notification.style.background = '#2196f3';
+            }
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+        
+        // 存档系统
+        function saveGame() {
+            const data = {
+                pet: pet,
+                saveTime: new Date().toISOString()
+            };
+            localStorage.setItem('pixel_pet_save', JSON.stringify(data));
+        }
+        
+        function loadGame() {
+            const data = localStorage.getItem('pixel_pet_save');
+            if (data) {
+                try {
+                    const parsed = JSON.parse(data);
+                    pet = parsed.pet;
+                    
+                    // 计算离线时间
+                    const saveTime = new Date(parsed.saveTime);
+                    const now = new Date();
+                    const offlineSeconds = (now - saveTime) / 1000;
+                    
+                    // 应用离线效果
+                    if (offlineSeconds > 60) {
+                        const offlineHours = offlineSeconds / 3600;
+                        pet.hunger = Math.max(0, pet.hunger - offlineHours * 5);
+                        pet.happiness = Math.max(0, pet.happiness - offlineHours * 4);
+                        pet.cleanliness = Math.max(0, pet.cleanliness - offlineHours * 3);
+                        pet.energy = Math.min(100, 80);
+                    }
+                    
+                    return true;
+                } catch (e) {
+                    console.error('加载存档失败:', e);
+                }
+            }
+            return false;
+        }
+        
+        // 计算年龄
+        function updateAge() {
+            const now = new Date();
+            const birthTime = new Date(pet.birthTime);
+            pet.ageDays = Math.floor((now - birthTime) / 86400000) + 1;
+        }
+        
+        // 初始化
+        function init() {
+            if (!loadGame()) {
+                // 新游戏
+                pet.birthTime = new Date();
+            }
+            
+            updateAge();
+            updateTime();
+            updateDisplay();
+            
+            // 定时更新
+            setInterval(updateTime, 1000);
+            setInterval(gameLoop, 100);  // 100ms 更新一次
+            setInterval(updateAge, 60000);  // 每分钟更新年龄
+        }
+        
+        // 启动游戏
+        init();
+    </script>
+</body>
+</html>

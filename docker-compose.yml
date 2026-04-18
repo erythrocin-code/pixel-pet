@@ -1,0 +1,10 @@
+version: '3'
+
+services:
+  buildozer:
+    build: .
+    volumes:
+      - ./bin:/app/bin
+      - ./.buildozer:/root/.buildozer
+    environment:
+      - BUILDOZER_LOG_LEVEL=2
